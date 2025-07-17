@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matplotlib GUI アプリ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tab-active {
+            border-bottom-color: #3b82f6;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        #csv-table-container {
+            max-height: 600px;
+            overflow: auto;
+        }
+        #csv-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #csv-table th, #csv-table td {
+            border: 1px solid #e5e7eb;
+            padding: 8px;
+            text-align: left;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+        #csv-table th {
+            background-color: #f9fafb;
+            position: sticky;
+            top: 0;
+        }
+        .plot-config-card {
+            border: 1px solid #e5e7eb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-90 z-50 flex flex-col items-center justify-center">
+        <div class="loader"></div>
+        <p class="mt-4 text-lg font-semibold text-gray-700">準備中です... (初回は時間がかかります)</p>
+        <p id="loading-status" class="text-sm text-gray-500 mt-2"></p>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-8 max-w-screen-2xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">Matplotlib GUI アプリ</h1>
+            <p class="text-lg text-gray-600 mt-2">複数のCSVファイルをアップロードし、柔軟にグラフを作成します。</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- コントロールパネル -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg self-start">
+                <div class="space-y-6">
+                    <!-- 1. データ入力 -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">1. データ入力</h3>
+                        <label for="csv-file" class="block text-md font-medium text-gray-700 mb-2">CSVファイルを選択 (複数可)</label>
+                        <input type="file" id="csv-file" accept=".csv" multiple class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors duration-200">
+                        <div id="file-list" class="mt-2 text-sm text-gray-600"></div>
+                        <label for="skip-rows" class="block text-sm font-medium text-gray-700 mt-4 mb-1">各ファイルの先頭行をスキップ:</label>
+                        <input type="number" id="skip-rows" value="0" min="0" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                    </div>
+
+                    <!-- 2. 描画モード -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">2. 描画モード</h3>
+                        <div class="flex space-x-4">
+                            <label class="flex items-center">
+                                <input type="radio" name="plot-mode" value="overlay" checked class="form-radio h-4 w-4 text-blue-600">
+                                <span class="ml-2 text-gray-700">重ねて表示</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="plot-mode" value="separate" class="form-radio h-4 w-4 text-blue-600">
+                                <span class="ml-2 text-gray-700">並べて表示</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- 3. プロット設定 -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">3. プロット設定</h3>
+                        <div id="plot-configs-container"></div>
+                        <button id="add-plot-btn" class="mt-2 w-full bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors duration-200 disabled:bg-gray-400" disabled>プロットを追加</button>
+                    </div>
+
+                    <!-- 4. 全体のスタイル -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">4. 全体のスタイル (重ねて表示モード用)</h3>
+                         <div class="space-y-4">
+                            <input type="text" id="chart-title" placeholder="グラフタイトル" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                            <input type="text" id="x-label" placeholder="X軸ラベル" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                            <input type="text" id="y-label" placeholder="Y軸ラベル" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                         </div>
+                    </div>
+
+                    <!-- 実行ボタン -->
+                    <button id="plot-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none" disabled>
+                        グラフを描画
+                    </button>
+                </div>
+            </div>
+
+            <!-- 表示エリア（タブ） -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                <div class="border-b border-gray-200 mb-4">
+                    <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                        <button id="tab-plot" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 tab-active">グラフ</button>
+                        <button id="tab-csv" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">CSVデータ</button>
+                    </nav>
+                </div>
+                <div id="plot-container" class="min-h-[500px] lg:min-h-full flex items-center justify-center">
+                    <div id="plot-area" class="w-full h-full flex items-center justify-center">
+                        <p class="text-gray-500">ここにグラフが表示されます</p>
+                    </div>
+                    <div id="error-message" class="text-red-500 font-bold hidden"></div>
+                </div>
+                <div id="csv-viewer-container" class="hidden">
+                    <div class="mb-4">
+                        <label for="csv-select-viewer" class="block text-sm font-medium text-gray-700">表示するファイル:</label>
+                        <select id="csv-select-viewer" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"></select>
+                    </div>
+                     <div id="csv-table-container">
+                        <p class="text-gray-500 text-center p-4">CSVファイルをアップロードすると、ここに内容が表示されます。</p>
+                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+    <script type="text/javascript">
+        // DOM Elements
+        const csvFileInput = document.getElementById('csv-file');
+        const skipRowsInput = document.getElementById('skip-rows');
+        const plotButton = document.getElementById('plot-button');
+        const addPlotBtn = document.getElementById('add-plot-btn');
+        const plotConfigsContainer = document.getElementById('plot-configs-container');
+        const fileListDiv = document.getElementById('file-list');
+        const plotArea = document.getElementById('plot-area');
+        const chartTitleInput = document.getElementById('chart-title');
+        const xLabelInput = document.getElementById('x-label');
+        const yLabelInput = document.getElementById('y-label');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingStatus = document.getElementById('loading-status');
+        const errorMessageDiv = document.getElementById('error-message');
+        const tabPlot = document.getElementById('tab-plot');
+        const tabCsv = document.getElementById('tab-csv');
+        const plotContainer = document.getElementById('plot-container');
+        const csvViewerContainer = document.getElementById('csv-viewer-container');
+        const csvTableContainer = document.getElementById('csv-table-container');
+        const csvSelectViewer = document.getElementById('csv-select-viewer');
+
+        let pyodide;
+        let loadedFiles = []; // { name: string, content: string, headers: string[] }
+
+        // --- Initialization ---
+        async function initializePyodide() {
+            loadingStatus.textContent = "Pyodideをロード中...";
+            pyodide = await loadPyodide();
+            loadingStatus.textContent = "Pythonパッケージをインストール中 (matplotlib, pandas)...";
+            await pyodide.loadPackage(['matplotlib', 'pandas']);
+            loadingOverlay.style.display = 'none';
+        }
+        initializePyodide();
+
+        // --- Event Listeners ---
+        csvFileInput.addEventListener('change', handleFileSelect);
+        skipRowsInput.addEventListener('input', updateAllHeaders);
+        addPlotBtn.addEventListener('click', () => addPlotConfig());
+        plotConfigsContainer.addEventListener('change', handlePlotConfigChange);
+        plotConfigsContainer.addEventListener('click', handlePlotConfigClick);
+        plotButton.addEventListener('click', plotChart);
+        tabPlot.addEventListener('click', () => switchTab('plot'));
+        tabCsv.addEventListener('click', () => switchTab('csv'));
+        csvSelectViewer.addEventListener('change', (e) => displayCsvAsTable(e.target.value));
+
+        // --- File Handling ---
+        function handleFileSelect(event) {
+            loadedFiles = [];
+            plotConfigsContainer.innerHTML = '';
+            const files = event.target.files;
+            if (files.length === 0) {
+                fileListDiv.textContent = 'ファイルが選択されていません。';
+                addPlotBtn.disabled = true;
+                plotButton.disabled = true;
+                return;
+            }
+
+            let filesToProcess = files.length;
+            fileListDiv.textContent = 'ファイルを読み込み中...';
+
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    const fileData = { name: file.name, content: content, headers: [] };
+                    loadedFiles.push(fileData);
+                    if (loadedFiles.length === filesToProcess) {
+                        updateAllHeaders();
+                        updateFileListView();
+                        updateCsvViewerSelect();
+                        addPlotBtn.disabled = false;
+                        plotButton.disabled = true; // Wait for plot config
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function updateAllHeaders() {
+            if (loadedFiles.length === 0) return;
+            const skipRows = parseInt(skipRowsInput.value) || 0;
+            loadedFiles.forEach(file => {
+                const lines = file.content.split('\n');
+                const headerLine = lines[skipRows] || '';
+                file.headers = headerLine.split(',').map(h => h.trim().replace(/"/g, ''));
+            });
+            // Update headers in existing plot configs
+            document.querySelectorAll('.plot-config-card').forEach(card => {
+                const fileSelect = card.querySelector('.file-select');
+                updateAxisSelectors(card, fileSelect.value);
+            });
+        }
+        
+        function updateFileListView() {
+            fileListDiv.innerHTML = `<b>読込済ファイル:</b><br>${loadedFiles.map(f => f.name).join('<br>')}`;
+        }
+
+        // --- Plot Configuration ---
+        let plotConfigIdCounter = 0;
+        function addPlotConfig() {
+            plotConfigIdCounter++;
+            const configId = `config-${plotConfigIdCounter}`;
+            const card = document.createElement('div');
+            card.className = 'plot-config-card';
+            card.id = configId;
+            card.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <p class="font-bold">プロット ${plotConfigIdCounter}</p>
+                    <button class="remove-plot-btn text-red-500 hover:text-red-700 font-bold">削除</button>
+                </div>
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-sm">ファイル</label>
+                            <select class="file-select w-full p-1 border rounded text-sm">${loadedFiles.map(f => `<option value="${f.name}">${f.name}</option>`).join('')}</select>
+                        </div>
+                        <div>
+                            <label class="text-sm">グラフ種類</label>
+                            <select class="type-select w-full p-1 border rounded text-sm">
+                                <option value="plot">折れ線</option><option value="scatter">散布図</option><option value="bar">棒グラフ</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-sm">X軸</label>
+                            <select class="x-axis-select w-full p-1 border rounded text-sm"></select>
+                        </div>
+                        <div>
+                            <label class="text-sm">Y軸</label>
+                            <select class="y-axis-select w-full p-1 border rounded text-sm"></select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm">凡例 (重ねて表示用)</label>
+                        <input type="text" class="legend-input w-full p-1 border rounded text-sm" placeholder="例: データA">
+                    </div>
+                    <div>
+                        <label class="text-sm">タイトル (並べて表示用)</label>
+                        <input type="text" class="title-input w-full p-1 border rounded text-sm" placeholder="例: 測定結果1">
+                    </div>
+                </div>
+            `;
+            plotConfigsContainer.appendChild(card);
+            updateAxisSelectors(card, loadedFiles[0].name);
+            plotButton.disabled = false;
+        }
+
+        function handlePlotConfigChange(e) {
+            if (e.target.classList.contains('file-select')) {
+                const card = e.target.closest('.plot-config-card');
+                updateAxisSelectors(card, e.target.value);
+            }
+        }
+        
+        function handlePlotConfigClick(e) {
+            if (e.target.classList.contains('remove-plot-btn')) {
+                e.target.closest('.plot-config-card').remove();
+                if (plotConfigsContainer.children.length === 0) {
+                    plotButton.disabled = true;
+                }
+            }
+        }
+
+        function updateAxisSelectors(cardElement, fileName) {
+            const file = loadedFiles.find(f => f.name === fileName);
+            if (!file) return;
+            const xSelect = cardElement.querySelector('.x-axis-select');
+            const ySelect = cardElement.querySelector('.y-axis-select');
+            const optionsHtml = file.headers.map(h => `<option value="${h}">${h}</option>`).join('');
+            xSelect.innerHTML = optionsHtml;
+            ySelect.innerHTML = optionsHtml;
+            if (file.headers.length > 1) {
+                ySelect.selectedIndex = 1;
+            }
+        }
+
+        // --- Tab & CSV Viewer ---
+        function switchTab(target) {
+            if (target === 'plot') {
+                plotContainer.style.display = 'flex';
+                csvViewerContainer.style.display = 'none';
+                tabPlot.classList.add('tab-active');
+                tabCsv.classList.remove('tab-active');
+            } else {
+                plotContainer.style.display = 'none';
+                csvViewerContainer.style.display = 'block';
+                tabPlot.classList.remove('tab-active');
+                tabCsv.classList.add('tab-active');
+                if (loadedFiles.length > 0) {
+                    displayCsvAsTable(csvSelectViewer.value);
+                }
+            }
+        }
+        
+        function updateCsvViewerSelect() {
+            csvSelectViewer.innerHTML = loadedFiles.map(f => `<option value="${f.name}">${f.name}</option>`).join('');
+            if (loadedFiles.length > 0) {
+                displayCsvAsTable(loadedFiles[0].name);
+            }
+        }
+
+        function displayCsvAsTable(fileName) {
+            const file = loadedFiles.find(f => f.name === fileName);
+            if (!file) {
+                 csvTableContainer.innerHTML = '<p class="text-gray-500 text-center p-4">ファイルが見つかりません。</p>';
+                 return;
+            }
+            const lines = file.content.split('\n');
+            const table = document.createElement('table');
+            table.id = 'csv-table';
+            const tbody = document.createElement('tbody');
+            lines.forEach(line => {
+                if (line.trim() === '') return;
+                const row = document.createElement('tr');
+                line.split(',').forEach(cellText => {
+                    const td = document.createElement('td');
+                    td.textContent = cellText.trim().replace(/"/g, '');
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+            csvTableContainer.innerHTML = '';
+            csvTableContainer.appendChild(table);
+        }
+
+        // --- Plotting ---
+        async function plotChart() {
+            if (!pyodide) return;
+            const configs = [];
+            document.querySelectorAll('.plot-config-card').forEach(card => {
+                configs.push({
+                    file: card.querySelector('.file-select').value,
+                    type: card.querySelector('.type-select').value,
+                    x: card.querySelector('.x-axis-select').value,
+                    y: card.querySelector('.y-axis-select').value,
+                    legend: card.querySelector('.legend-input').value,
+                    title: card.querySelector('.title-input').value,
+                });
+            });
+
+            if (configs.length === 0) {
+                alert("描画するプロットが設定されていません。");
+                return;
+            }
+
+            switchTab('plot');
+            plotArea.innerHTML = '<div class="loader"></div><p class="mt-2 text-gray-600">グラフを生成中...</p>';
+            errorMessageDiv.classList.add('hidden');
+
+            try {
+                const fileDataDict = loadedFiles.reduce((acc, file) => {
+                    acc[file.name] = file.content;
+                    return acc;
+                }, {});
+
+                pyodide.globals.set('plot_configs_json', JSON.stringify(configs));
+                pyodide.globals.set('file_data_dict_json', JSON.stringify(fileDataDict));
+                pyodide.globals.set('skip_rows', parseInt(skipRowsInput.value) || 0);
+                pyodide.globals.set('plot_mode', document.querySelector('input[name="plot-mode"]:checked').value);
+                pyodide.globals.set('g_title', chartTitleInput.value);
+                pyodide.globals.set('g_xlabel', xLabelInput.value);
+                pyodide.globals.set('g_ylabel', yLabelInput.value);
+
+                const imageBase64 = await pyodide.runPythonAsync(`
+                    import pandas as pd
+                    import matplotlib.pyplot as plt
+                    import io
+                    import base64
+                    import json
+                    import math
+                    from io import StringIO
+
+                    result = ""
+                    try:
+                        plot_configs = json.loads(plot_configs_json)
+                        file_data_dict = json.loads(file_data_dict_json)
+                        
+                        all_dfs = {}
+                        for name, content in file_data_dict.items():
+                            all_dfs[name] = pd.read_csv(StringIO(content), skiprows=skip_rows, header=0)
+
+                        if plot_mode == 'overlay':
+                            fig, ax = plt.subplots(figsize=(10, 7))
+                            for conf in plot_configs:
+                                df = all_dfs[conf['file']]
+                                # Use user-provided legend, or create a default one
+                                label = conf.get('legend') if conf.get('legend') else f"{conf['file']} - {conf['y']}"
+                                if conf['type'] == 'plot':
+                                    ax.plot(df[conf['x']], df[conf['y']], label=label)
+                                elif conf['type'] == 'scatter':
+                                    ax.scatter(df[conf['x']], df[conf['y']], label=label)
+                                elif conf['type'] == 'bar':
+                                    ax.bar(df[conf['x']], df[conf['y']], label=label, alpha=0.6)
+                            ax.set_title(g_title if g_title else "Overlay Plot")
+                            ax.set_xlabel(g_xlabel if g_xlabel else "X-axis")
+                            ax.set_ylabel(g_ylabel if g_ylabel else "Y-axis")
+                            ax.legend()
+                            ax.grid(True, linestyle='--', alpha=0.6)
+
+                        elif plot_mode == 'separate':
+                            num_plots = len(plot_configs)
+                            if num_plots == 0:
+                                raise ValueError("No plots configured")
+                            
+                            cols = math.ceil(math.sqrt(num_plots))
+                            rows = math.ceil(num_plots / cols)
+                            
+                            fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 4 * rows))
+                            axes = axes.flatten() if num_plots > 1 else [axes]
+
+                            for i, conf in enumerate(plot_configs):
+                                ax = axes[i]
+                                df = all_dfs[conf['file']]
+                                # Use user-provided title, or create a default one
+                                title = conf.get('title') if conf.get('title') else f"{conf['file']}\\n{conf['x']} vs {conf['y']}"
+                                if conf['type'] == 'plot':
+                                    ax.plot(df[conf['x']], df[conf['y']])
+                                elif conf['type'] == 'scatter':
+                                    ax.scatter(df[conf['x']], df[conf['y']])
+                                elif conf['type'] == 'bar':
+                                    ax.bar(df[conf['x']], df[conf['y']])
+                                
+                                ax.set_title(title, fontsize=10)
+                                ax.set_xlabel(conf['x'], fontsize=8)
+                                ax.set_ylabel(conf['y'], fontsize=8)
+                                ax.grid(True, linestyle='--', alpha=0.6)
+                            
+                            for j in range(num_plots, len(axes)):
+                                axes[j].set_visible(False)
+
+                        fig.tight_layout(pad=3.0)
+                        buf = io.BytesIO()
+                        fig.savefig(buf, format='png', dpi=150)
+                        buf.seek(0)
+                        result = base64.b64encode(buf.read()).decode('utf-8')
+                        plt.close(fig)
+
+                    except Exception as e:
+                        result = f"Python Error: {e}"
+
+                    result
+                `);
+
+                if (imageBase64 && imageBase64.startsWith('iVBOR')) {
+                     plotArea.innerHTML = `<img src="data:image/png;base64,${imageBase64}" alt="Generated Plot" class="max-w-full max-h-full object-contain rounded-lg"/>`;
+                } else {
+                    throw new Error(imageBase64 || "不明な描画エラーが発生しました。");
+                }
+
+            } catch (error) {
+                console.error("Error plotting:", error);
+                const errorText = error.message.includes("KeyError") 
+                    ? `選択された列が見つかりません。CSVのヘッダーとスキップ行数を確認してください。` 
+                    : `グラフの生成に失敗しました。(${error.message})`;
+                plotArea.innerHTML = '';
+                errorMessageDiv.textContent = errorText;
+                errorMessageDiv.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
+
