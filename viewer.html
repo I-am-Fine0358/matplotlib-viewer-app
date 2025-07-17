@@ -137,6 +137,11 @@
                     </div>
                     <div id="error-message" class="text-red-500 font-bold hidden"></div>
                 </div>
+                <div id="plot-actions" class="text-center mt-4">
+                    <button id="download-btn" class="hidden bg-purple-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-600 transition-colors duration-200">
+                        PNG形式で保存
+                    </button>
+                </div>
                 <div id="csv-viewer-container" class="hidden">
                     <div class="mb-4">
                         <label for="csv-select-viewer" class="block text-sm font-medium text-gray-700">表示するファイル:</label>
@@ -172,9 +177,11 @@
         const csvViewerContainer = document.getElementById('csv-viewer-container');
         const csvTableContainer = document.getElementById('csv-table-container');
         const csvSelectViewer = document.getElementById('csv-select-viewer');
+        const downloadBtn = document.getElementById('download-btn');
 
         let pyodide;
         let loadedFiles = []; // { name: string, content: string, headers: string[] }
+        let currentPlotData = null;
 
         // --- Initialization ---
         async function initializePyodide() {
@@ -196,6 +203,7 @@
         tabPlot.addEventListener('click', () => switchTab('plot'));
         tabCsv.addEventListener('click', () => switchTab('csv'));
         csvSelectViewer.addEventListener('change', (e) => displayCsvAsTable(e.target.value));
+        downloadBtn.addEventListener('click', downloadPlot);
 
         // --- File Handling ---
         function handleFileSelect(event) {
@@ -271,7 +279,11 @@
                         <div>
                             <label class="text-sm">グラフ種類</label>
                             <select class="type-select w-full p-1 border rounded text-sm">
-                                <option value="plot">折れ線</option><option value="scatter">散布図</option><option value="bar">棒グラフ</option>
+                                <option value="plot">折れ線</option>
+                                <option value="scatter">散布図</option>
+                                <option value="bar">棒グラフ</option>
+                                <option value="hist">ヒストグラム</option>
+                                <option value="boxplot">箱ひげ図</option>
                             </select>
                         </div>
                     </div>
@@ -301,9 +313,17 @@
         }
 
         function handlePlotConfigChange(e) {
+            const card = e.target.closest('.plot-config-card');
             if (e.target.classList.contains('file-select')) {
-                const card = e.target.closest('.plot-config-card');
                 updateAxisSelectors(card, e.target.value);
+            }
+            if (e.target.classList.contains('type-select')) {
+                const yAxisSelect = card.querySelector('.y-axis-select');
+                const yAxisLabel = yAxisSelect.previousElementSibling;
+                const isSingleVar = ['hist', 'boxplot'].includes(e.target.value);
+                yAxisSelect.disabled = isSingleVar;
+                yAxisLabel.style.opacity = isSingleVar ? '0.5' : '1';
+                if(isSingleVar) yAxisSelect.selectedIndex = -1;
             }
         }
         
@@ -379,7 +399,18 @@
             csvTableContainer.appendChild(table);
         }
 
-        // --- Plotting ---
+        // --- Plotting & Download ---
+        function downloadPlot() {
+            if (!currentPlotData) return;
+            const link = document.createElement('a');
+            link.href = `data:image/png;base64,${currentPlotData}`;
+            const title = chartTitleInput.value || 'plot';
+            link.download = `${title.replace(/\s+/g, '_')}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         async function plotChart() {
             if (!pyodide) return;
             const configs = [];
@@ -402,6 +433,8 @@
             switchTab('plot');
             plotArea.innerHTML = '<div class="loader"></div><p class="mt-2 text-gray-600">グラフを生成中...</p>';
             errorMessageDiv.classList.add('hidden');
+            downloadBtn.classList.add('hidden');
+            currentPlotData = null;
 
             try {
                 const fileDataDict = loadedFiles.reduce((acc, file) => {
@@ -437,16 +470,28 @@
 
                         if plot_mode == 'overlay':
                             fig, ax = plt.subplots(figsize=(10, 7))
-                            for conf in plot_configs:
+                            for i, conf in enumerate(plot_configs):
                                 df = all_dfs[conf['file']]
-                                # Use user-provided legend, or create a default one
-                                label = conf.get('legend') if conf.get('legend') else f"{conf['file']} - {conf['y']}"
+                                
+                                label = conf.get('legend')
+                                if not label:
+                                    if conf['type'] in ['hist', 'boxplot']:
+                                        label = f"{conf['file']} - {conf['x']}"
+                                    else:
+                                        label = f"{conf['file']} - {conf['y']}"
+
                                 if conf['type'] == 'plot':
                                     ax.plot(df[conf['x']], df[conf['y']], label=label)
                                 elif conf['type'] == 'scatter':
                                     ax.scatter(df[conf['x']], df[conf['y']], label=label)
                                 elif conf['type'] == 'bar':
                                     ax.bar(df[conf['x']], df[conf['y']], label=label, alpha=0.6)
+                                elif conf['type'] == 'hist':
+                                    ax.hist(df[conf['x']], bins=20, alpha=0.7, label=label)
+                                elif conf['type'] == 'boxplot':
+                                    # For overlay, plot side-by-side using positions
+                                    ax.boxplot(df[conf['x']], positions=[i], widths=0.6)
+
                             ax.set_title(g_title if g_title else "Overlay Plot")
                             ax.set_xlabel(g_xlabel if g_xlabel else "X-axis")
                             ax.set_ylabel(g_ylabel if g_ylabel else "Y-axis")
@@ -467,18 +512,29 @@
                             for i, conf in enumerate(plot_configs):
                                 ax = axes[i]
                                 df = all_dfs[conf['file']]
-                                # Use user-provided title, or create a default one
-                                title = conf.get('title') if conf.get('title') else f"{conf['file']}\\n{conf['x']} vs {conf['y']}"
+
+                                title = conf.get('title')
+                                if not title:
+                                    if conf['type'] in ['hist', 'boxplot']:
+                                        title = f"{conf['file']}\\n{conf['x']}"
+                                    else:
+                                        title = f"{conf['file']}\\n{conf['x']} vs {conf['y']}"
+
                                 if conf['type'] == 'plot':
                                     ax.plot(df[conf['x']], df[conf['y']])
                                 elif conf['type'] == 'scatter':
                                     ax.scatter(df[conf['x']], df[conf['y']])
                                 elif conf['type'] == 'bar':
                                     ax.bar(df[conf['x']], df[conf['y']])
+                                elif conf['type'] == 'hist':
+                                    ax.hist(df[conf['x']], bins=20)
+                                elif conf['type'] == 'boxplot':
+                                    ax.boxplot(df[conf['x']])
                                 
                                 ax.set_title(title, fontsize=10)
                                 ax.set_xlabel(conf['x'], fontsize=8)
-                                ax.set_ylabel(conf['y'], fontsize=8)
+                                if conf['type'] not in ['hist', 'boxplot']:
+                                    ax.set_ylabel(conf['y'], fontsize=8)
                                 ax.grid(True, linestyle='--', alpha=0.6)
                             
                             for j in range(num_plots, len(axes)):
@@ -499,6 +555,8 @@
 
                 if (imageBase64 && imageBase64.startsWith('iVBOR')) {
                      plotArea.innerHTML = `<img src="data:image/png;base64,${imageBase64}" alt="Generated Plot" class="max-w-full max-h-full object-contain rounded-lg"/>`;
+                     currentPlotData = imageBase64;
+                     downloadBtn.classList.remove('hidden');
                 } else {
                     throw new Error(imageBase64 || "不明な描画エラーが発生しました。");
                 }
@@ -511,6 +569,7 @@
                 plotArea.innerHTML = '';
                 errorMessageDiv.textContent = errorText;
                 errorMessageDiv.classList.remove('hidden');
+                downloadBtn.classList.add('hidden');
             }
         }
     </script>
