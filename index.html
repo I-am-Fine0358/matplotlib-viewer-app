@@ -297,6 +297,26 @@
                             <select class="y-axis-select w-full p-1 border rounded text-sm"></select>
                         </div>
                     </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-sm">X軸 最小値</label>
+                            <input type="number" step="any" class="x-min-input w-full p-1 border rounded text-sm" placeholder="自動">
+                        </div>
+                        <div>
+                            <label class="text-sm">X軸 最大値</label>
+                            <input type="number" step="any" class="x-max-input w-full p-1 border rounded text-sm" placeholder="自動">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-sm">Y軸 最小値</label>
+                            <input type="number" step="any" class="y-min-input w-full p-1 border rounded text-sm" placeholder="自動">
+                        </div>
+                        <div>
+                            <label class="text-sm">Y軸 最大値</label>
+                            <input type="number" step="any" class="y-max-input w-full p-1 border rounded text-sm" placeholder="自動">
+                        </div>
+                    </div>
                     <div>
                         <label class="text-sm">凡例 (重ねて表示用)</label>
                         <input type="text" class="legend-input w-full p-1 border rounded text-sm" placeholder="例: データA">
@@ -422,6 +442,10 @@
                     y: card.querySelector('.y-axis-select').value,
                     legend: card.querySelector('.legend-input').value,
                     title: card.querySelector('.title-input').value,
+                    x_min: card.querySelector('.x-min-input').value,
+                    x_max: card.querySelector('.x-max-input').value,
+                    y_min: card.querySelector('.y-min-input').value,
+                    y_max: card.querySelector('.y-max-input').value,
                 });
             });
 
@@ -497,6 +521,12 @@
                             ax.set_ylabel(g_ylabel if g_ylabel else "Y-axis")
                             ax.legend()
                             ax.grid(True, linestyle='--', alpha=0.6)
+                            
+                            # Apply x and y limits if provided
+                            if conf.get('x_min'): ax.set_xlim(left=float(conf['x_min']))
+                            if conf.get('x_max'): ax.set_xlim(right=float(conf['x_max']))
+                            if conf.get('y_min'): ax.set_ylim(bottom=float(conf['y_min']))
+                            if conf.get('y_max'): ax.set_ylim(top=float(conf['y_max']))
 
                         elif plot_mode == 'separate':
                             num_plots = len(plot_configs)
@@ -536,6 +566,12 @@
                                 if conf['type'] not in ['hist', 'boxplot']:
                                     ax.set_ylabel(conf['y'], fontsize=8)
                                 ax.grid(True, linestyle='--', alpha=0.6)
+
+                                # Apply x and y limits if provided
+                                if conf.get('x_min'): ax.set_xlim(left=float(conf['x_min']))
+                                if conf.get('x_max'): ax.set_xlim(right=float(conf['x_max']))
+                                if conf.get('y_min'): ax.set_ylim(bottom=float(conf['y_min']))
+                                if conf.get('y_max'): ax.set_ylim(top=float(conf['y_max']))
                             
                             for j in range(num_plots, len(axes)):
                                 axes[j].set_visible(False)
