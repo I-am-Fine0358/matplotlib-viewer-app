@@ -322,6 +322,10 @@
                         <input type="text" class="legend-input w-full p-1 border rounded text-sm" placeholder="例: データA">
                     </div>
                     <div>
+                        <label class="text-sm">プロット色</label>
+                        <input type="color" class="color-input w-full p-1 border rounded text-sm" value="#1f77b4">
+                    </div>
+                    <div>
                         <label class="text-sm">タイトル (並べて表示用)</label>
                         <input type="text" class="title-input w-full p-1 border rounded text-sm" placeholder="例: 測定結果1">
                     </div>
@@ -446,6 +450,7 @@
                     x_max: card.querySelector('.x-max-input').value,
                     y_min: card.querySelector('.y-min-input').value,
                     y_max: card.querySelector('.y-max-input').value,
+                    color: card.querySelector('.color-input').value,
                 });
             });
 
@@ -505,16 +510,16 @@
                                         label = f"{conf['file']} - {conf['y']}"
 
                                 if conf['type'] == 'plot':
-                                    ax.plot(df[conf['x']], df[conf['y']], label=label)
+                                    ax.plot(df[conf['x']], df[conf['y']], label=label, color=conf.get('color'))
                                 elif conf['type'] == 'scatter':
-                                    ax.scatter(df[conf['x']], df[conf['y']], label=label)
+                                    ax.scatter(df[conf['x']], df[conf['y']], label=label, color=conf.get('color'))
                                 elif conf['type'] == 'bar':
-                                    ax.bar(df[conf['x']], df[conf['y']], label=label, alpha=0.6)
+                                    ax.bar(df[conf['x']], df[conf['y']], label=label, alpha=0.6, color=conf.get('color'))
                                 elif conf['type'] == 'hist':
-                                    ax.hist(df[conf['x']], bins=20, alpha=0.7, label=label)
+                                    ax.hist(df[conf['x']], bins=20, alpha=0.7, label=label, color=conf.get('color'))
                                 elif conf['type'] == 'boxplot':
                                     # For overlay, plot side-by-side using positions
-                                    ax.boxplot(df[conf['x']], positions=[i], widths=0.6)
+                                    ax.boxplot(df[conf['x']], positions=[i], widths=0.6, patch_artist=True, boxprops=dict(facecolor=conf.get('color')))
 
                             ax.set_title(g_title if g_title else "Overlay Plot")
                             ax.set_xlabel(g_xlabel if g_xlabel else "X-axis")
@@ -551,15 +556,15 @@
                                         title = f"{conf['file']}\\n{conf['x']} vs {conf['y']}"
 
                                 if conf['type'] == 'plot':
-                                    ax.plot(df[conf['x']], df[conf['y']])
+                                    ax.plot(df[conf['x']], df[conf['y']], color=conf.get('color'))
                                 elif conf['type'] == 'scatter':
-                                    ax.scatter(df[conf['x']], df[conf['y']])
+                                    ax.scatter(df[conf['x']], df[conf['y']], color=conf.get('color'))
                                 elif conf['type'] == 'bar':
-                                    ax.bar(df[conf['x']], df[conf['y']])
+                                    ax.bar(df[conf['x']], df[conf['y']], color=conf.get('color'))
                                 elif conf['type'] == 'hist':
-                                    ax.hist(df[conf['x']], bins=20)
+                                    ax.hist(df[conf['x']], bins=20, color=conf.get('color'))
                                 elif conf['type'] == 'boxplot':
-                                    ax.boxplot(df[conf['x']])
+                                    ax.boxplot(df[conf['x']], patch_artist=True, boxprops=dict(facecolor=conf.get('color')))
                                 
                                 ax.set_title(title, fontsize=10)
                                 ax.set_xlabel(conf['x'], fontsize=8)
