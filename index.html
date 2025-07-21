@@ -560,7 +560,9 @@
                 <div class="space-y-2">
                     <div>
                         <label class="text-sm">数式 (例: y = sin(x))</label>
-                        <input type="text" class="function-input w-full p-1 border rounded text-sm" placeholder="y = sin(x)">
+                        <textarea class="function-input w-full p-1 border rounded text-sm" placeholder="例:
+a = 2
+y = x**a" rows="3"></textarea>
                     </div>
                     <div>
                         <label class="text-sm">プロット色</label>
@@ -642,12 +644,20 @@ try:
         equation = config['equation']
         color = config['color']
         
-        if '=' in equation:
-            formula = equation.split('=', 1)[1].strip()
-        else:
-            formula = equation
-        
-        y = eval(formula, {"__builtins__": {}}, safe_dict)
+        # Create a local dictionary for exec to store variables
+        # This allows variables like 'a' to be defined and used
+        exec_context = safe_dict.copy()
+        exec_context['y'] = None # Ensure 'y' is in the context, even if not explicitly defined by user
+
+        try:
+            # Execute the multi-line equation string
+            exec(equation, {"__builtins__": {}}, exec_context)
+            # Retrieve the 'y' value after execution
+            y = exec_context['y']
+            if y is None:
+                raise ValueError("数式で 'y' が定義されていません。例: y = x**2")
+        except Exception as e:
+            raise ValueError(f"数式の評価中にエラーが発生しました: {e}")
         ax.plot(x, y, label=equation, color=color)
 
     ax.set_title(g_title if g_title else "Function Plot")
