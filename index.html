@@ -67,59 +67,91 @@
     <div class="container mx-auto p-4 md:p-8 max-w-screen-2xl">
         <header class="text-center mb-8">
             <h1 class="text-4xl font-bold text-gray-900">Matplotlib GUI アプリ</h1>
-            <p class="text-lg text-gray-600 mt-2">複数のCSVファイルをアップロードし、柔軟にグラフを作成します。</p>
+            <p class="text-lg text-gray-600 mt-2">CSVファイルの可視化や数式のグラフ描画ができます。</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- コントロールパネル -->
             <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg self-start">
-                <div class="space-y-6">
-                    <!-- 1. データ入力 -->
-                    <div>
-                        <h3 class="text-lg font-semibold mb-2">1. データ入力</h3>
-                        <label for="csv-file" class="block text-md font-medium text-gray-700 mb-2">CSVファイルを選択 (複数可)</label>
-                        <input type="file" id="csv-file" accept=".csv" multiple class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors duration-200">
-                        <div id="file-list" class="mt-2 text-sm text-gray-600"></div>
-                        <label for="skip-rows" class="block text-sm font-medium text-gray-700 mt-4 mb-1">各ファイルの先頭行をスキップ:</label>
-                        <input type="number" id="skip-rows" value="0" min="0" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                    </div>
-
-                    <!-- 2. 描画モード -->
-                    <div>
-                        <h3 class="text-lg font-semibold mb-2">2. 描画モード</h3>
-                        <div class="flex space-x-4">
-                            <label class="flex items-center">
-                                <input type="radio" name="plot-mode" value="overlay" checked class="form-radio h-4 w-4 text-blue-600">
-                                <span class="ml-2 text-gray-700">重ねて表示</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="radio" name="plot-mode" value="separate" class="form-radio h-4 w-4 text-blue-600">
-                                <span class="ml-2 text-gray-700">並べて表示</span>
-                            </label>
+                <!-- CSV Plot Controls -->
+                <div id="csv-controls">
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2">1. データ入力</h3>
+                            <label for="csv-file" class="block text-md font-medium text-gray-700 mb-2">CSVファイルを選択 (複数可)</label>
+                            <input type="file" id="csv-file" accept=".csv" multiple class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors duration-200">
+                            <div id="file-list" class="mt-2 text-sm text-gray-600"></div>
+                            <label for="skip-rows" class="block text-sm font-medium text-gray-700 mt-4 mb-1">各ファイルの先頭行をスキップ:</label>
+                            <input type="number" id="skip-rows" value="0" min="0" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
                         </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2">2. 描画モード</h3>
+                            <div class="flex space-x-4">
+                                <label class="flex items-center">
+                                    <input type="radio" name="plot-mode" value="overlay" checked class="form-radio h-4 w-4 text-blue-600">
+                                    <span class="ml-2 text-gray-700">重ねて表示</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="plot-mode" value="separate" class="form-radio h-4 w-4 text-blue-600">
+                                    <span class="ml-2 text-gray-700">並べて表示</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2">3. プロット設定</h3>
+                            <div id="plot-configs-container"></div>
+                            <button id="add-plot-btn" class="mt-2 w-full bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors duration-200 disabled:bg-gray-400" disabled>プロットを追加</button>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2">4. 全体のスタイル (重ねて表示モード用)</h3>
+                             <div class="space-y-4">
+                                <input type="text" id="chart-title" placeholder="グラフタイトル" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                                <input type="text" id="x-label" placeholder="X軸ラベル" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                                <input type="text" id="y-label" placeholder="Y軸ラベル" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                             </div>
+                        </div>
+                        <button id="plot-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none">
+                            CSVからグラフを描画
+                        </button>
                     </div>
-                    
-                    <!-- 3. プロット設定 -->
-                    <div>
-                        <h3 class="text-lg font-semibold mb-2">3. プロット設定</h3>
-                        <div id="plot-configs-container"></div>
-                        <button id="add-plot-btn" class="mt-2 w-full bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors duration-200 disabled:bg-gray-400" disabled>プロットを追加</button>
-                    </div>
+                </div>
 
-                    <!-- 4. 全体のスタイル -->
-                    <div>
-                        <h3 class="text-lg font-semibold mb-2">4. 全体のスタイル (重ねて表示モード用)</h3>
-                         <div class="space-y-4">
-                            <input type="text" id="chart-title" placeholder="グラフタイトル" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                            <input type="text" id="x-label" placeholder="X軸ラベル" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                            <input type="text" id="y-label" placeholder="Y軸ラベル" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                         </div>
+                <!-- Function Plot Controls -->
+                <div id="function-controls" class="hidden">
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2">1. 数式プロット設定</h3>
+                             <p class="text-sm text-gray-600 mb-2">
+                                <span class="font-semibold">利用可能な関数:</span> sin, cos, tan, exp, log, log10, sqrt, abs, pi, e など (numpyの定数と関数が使えます)
+                            </p>
+                            <div id="function-plot-configs-container"></div>
+                            <button id="add-function-plot-btn" class="mt-2 w-full bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors duration-200">数式プロットを追加</button>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2">2. 描画範囲</h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="x-min-func" class="block text-sm font-medium text-gray-700">X 最小値</label>
+                                    <input type="number" id="x-min-func" value="-10" class="w-full mt-1 p-2 border border-gray-300 rounded-lg">
+                                </div>
+                                <div>
+                                    <label for="x-max-func" class="block text-sm font-medium text-gray-700">X 最大値</label>
+                                    <input type="number" id="x-max-func" value="10" class="w-full mt-1 p-2 border border-gray-300 rounded-lg">
+                                </div>
+                            </div>
+                        </div>
+                         <div>
+                            <h3 class="text-lg font-semibold mb-2">3. 全体のスタイル</h3>
+                             <div class="space-y-4">
+                                <input type="text" id="func-chart-title" placeholder="グラフタイトル" class="w-full p-3 border border-gray-300 rounded-lg">
+                                <input type="text" id="func-x-label" placeholder="X軸ラベル" value="x" class="w-full p-3 border border-gray-300 rounded-lg">
+                                <input type="text" id="func-y-label" placeholder="Y軸ラベル" value="y" class="w-full p-3 border border-gray-300 rounded-lg">
+                             </div>
+                        </div>
+                        <button id="plot-function-button" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all duration-300 transform hover:scale-105 disabled:bg-gray-400">
+                            数式グラフを描画
+                        </button>
                     </div>
-
-                    <!-- 実行ボタン -->
-                    <button id="plot-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none" disabled>
-                        グラフを描画
-                    </button>
                 </div>
             </div>
 
@@ -127,8 +159,9 @@
             <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
                 <div class="border-b border-gray-200 mb-4">
                     <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                        <button id="tab-plot" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 tab-active">グラフ</button>
-                        <button id="tab-csv" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">CSVデータ</button>
+                        <button id="tab-plot" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 tab-active">CSVプロット</button>
+                        <button id="tab-function" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">数式グラフ</button>
+                        <button id="tab-csv" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">CSVデータ表示</button>
                     </nav>
                 </div>
                 <div id="plot-container" class="min-h-[500px] lg:min-h-full flex items-center justify-center">
@@ -157,39 +190,62 @@
 
     <script type="text/javascript" src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
     <script type="text/javascript">
-        // DOM Elements
+        // --- Constants ---
+        const DEFAULT_COLORS = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+
+        // --- DOM Elements ---
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingStatus = document.getElementById('loading-status');
+        const plotArea = document.getElementById('plot-area');
+        const errorMessageDiv = document.getElementById('error-message');
+        const downloadBtn = document.getElementById('download-btn');
+
+        // Tabs and Main Containers
+        const tabPlot = document.getElementById('tab-plot');
+        const tabFunction = document.getElementById('tab-function');
+        const tabCsv = document.getElementById('tab-csv');
+        const plotContainer = document.getElementById('plot-container');
+        const csvViewerContainer = document.getElementById('csv-viewer-container');
+        const csvControls = document.getElementById('csv-controls');
+        const functionControls = document.getElementById('function-controls');
+
+        // CSV Plot Elements
         const csvFileInput = document.getElementById('csv-file');
         const skipRowsInput = document.getElementById('skip-rows');
         const plotButton = document.getElementById('plot-button');
         const addPlotBtn = document.getElementById('add-plot-btn');
         const plotConfigsContainer = document.getElementById('plot-configs-container');
         const fileListDiv = document.getElementById('file-list');
-        const plotArea = document.getElementById('plot-area');
         const chartTitleInput = document.getElementById('chart-title');
         const xLabelInput = document.getElementById('x-label');
         const yLabelInput = document.getElementById('y-label');
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const loadingStatus = document.getElementById('loading-status');
-        const errorMessageDiv = document.getElementById('error-message');
-        const tabPlot = document.getElementById('tab-plot');
-        const tabCsv = document.getElementById('tab-csv');
-        const plotContainer = document.getElementById('plot-container');
-        const csvViewerContainer = document.getElementById('csv-viewer-container');
         const csvTableContainer = document.getElementById('csv-table-container');
         const csvSelectViewer = document.getElementById('csv-select-viewer');
-        const downloadBtn = document.getElementById('download-btn');
 
+        // Function Plot Elements
+        const functionPlotConfigsContainer = document.getElementById('function-plot-configs-container');
+        const addFunctionPlotBtn = document.getElementById('add-function-plot-btn');
+        const xMinFunc = document.getElementById('x-min-func');
+        const xMaxFunc = document.getElementById('x-max-func');
+        const plotFunctionButton = document.getElementById('plot-function-button');
+        const funcChartTitle = document.getElementById('func-chart-title');
+        const funcXLabel = document.getElementById('func-x-label');
+        const funcYLabel = document.getElementById('func-y-label');
+
+        // --- Global State ---
         let pyodide;
         let loadedFiles = []; // { name: string, content: string, headers: string[] }
         let currentPlotData = null;
+        let functionPlotIdCounter = 0;
 
         // --- Initialization ---
         async function initializePyodide() {
             loadingStatus.textContent = "Pyodideをロード中...";
             pyodide = await loadPyodide();
-            loadingStatus.textContent = "Pythonパッケージをインストール中 (matplotlib, pandas)...";
-            await pyodide.loadPackage(['matplotlib', 'pandas']);
+            loadingStatus.textContent = "Pythonパッケージをインストール中 (matplotlib, pandas, numpy)...";
+            await pyodide.loadPackage(['matplotlib', 'pandas', 'numpy']);
             loadingOverlay.style.display = 'none';
+            addFunctionPlotConfig(); // Add one function plot by default
         }
         initializePyodide();
 
@@ -200,10 +256,52 @@
         plotConfigsContainer.addEventListener('change', handlePlotConfigChange);
         plotConfigsContainer.addEventListener('click', handlePlotConfigClick);
         plotButton.addEventListener('click', plotChart);
-        tabPlot.addEventListener('click', () => switchTab('plot'));
-        tabCsv.addEventListener('click', () => switchTab('csv'));
-        csvSelectViewer.addEventListener('change', (e) => displayCsvAsTable(e.target.value));
         downloadBtn.addEventListener('click', downloadPlot);
+        
+        // Tab listeners
+        tabPlot.addEventListener('click', () => switchTab('plot'));
+        tabFunction.addEventListener('click', () => switchTab('function'));
+        tabCsv.addEventListener('click', () => switchTab('csv'));
+        
+        // Function plot listeners
+        addFunctionPlotBtn.addEventListener('click', addFunctionPlotConfig);
+        functionPlotConfigsContainer.addEventListener('click', handleFunctionPlotConfigClick);
+        plotFunctionButton.addEventListener('click', plotFunctionGraph);
+
+        csvSelectViewer.addEventListener('change', (e) => displayCsvAsTable(e.target.value));
+
+        // --- Tab & View Switching ---
+        function switchTab(target) {
+            [tabPlot, tabFunction, tabCsv].forEach(tab => tab.classList.remove('tab-active'));
+            [plotContainer, csvViewerContainer, csvControls, functionControls].forEach(el => el.style.display = 'none');
+            
+            if (target === 'plot') {
+                tabPlot.classList.add('tab-active');
+                csvControls.style.display = 'block';
+                plotContainer.style.display = 'flex';
+            } else if (target === 'function') {
+                tabFunction.classList.add('tab-active');
+                functionControls.style.display = 'block';
+                plotContainer.style.display = 'flex';
+            } else if (target === 'csv') {
+                tabCsv.classList.add('tab-active');
+                csvViewerContainer.style.display = 'block';
+                if (loadedFiles.length > 0) {
+                    displayCsvAsTable(csvSelectViewer.value);
+                }
+            }
+        }
+
+        // --- Generic Helper ---
+        function createColorPalette(container, inputElement) {
+            DEFAULT_COLORS.forEach(color => {
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch w-6 h-6 rounded-full cursor-pointer border border-gray-300';
+                swatch.style.backgroundColor = color;
+                swatch.dataset.color = color;
+                container.appendChild(swatch);
+            });
+        }
 
         // --- File Handling ---
         function handleFileSelect(event) {
@@ -231,7 +329,7 @@
                         updateFileListView();
                         updateCsvViewerSelect();
                         addPlotBtn.disabled = false;
-                        plotButton.disabled = true; // Wait for plot config
+                        plotButton.disabled = true;
                     }
                 };
                 reader.readAsText(file);
@@ -246,7 +344,6 @@
                 const headerLine = lines[skipRows] || '';
                 file.headers = headerLine.split(',').map(h => h.trim().replace(/"/g, ''));
             });
-            // Update headers in existing plot configs
             document.querySelectorAll('.plot-config-card').forEach(card => {
                 const fileSelect = card.querySelector('.file-select');
                 updateAxisSelectors(card, fileSelect.value);
@@ -257,7 +354,7 @@
             fileListDiv.innerHTML = `<b>読込済ファイル:</b><br>${loadedFiles.map(f => f.name).join('<br>')}`;
         }
 
-        // --- Plot Configuration ---
+        // --- Plot Configuration (CSV) ---
         let plotConfigIdCounter = 0;
         function addPlotConfig() {
             plotConfigIdCounter++;
@@ -324,9 +421,7 @@
                     <div>
                         <label class="text-sm">プロット色</label>
                         <input type="color" class="color-input w-full p-1 border rounded text-sm" value="#1f77b4">
-                        <div class="color-palette mt-2 flex flex-wrap gap-1">
-                            <!-- Color swatches will be inserted here by JavaScript -->
-                        </div>
+                        <div class="color-palette mt-2 flex flex-wrap gap-1"></div>
                     </div>
                     <div>
                         <label class="text-sm">タイトル (並べて表示用)</label>
@@ -338,16 +433,8 @@
             updateAxisSelectors(card, loadedFiles[0].name);
             plotButton.disabled = false;
 
-            // Add color swatches
             const colorPaletteDiv = card.querySelector('.color-palette');
-            const defaultColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']; // 6 colors
-            defaultColors.forEach(color => {
-                const swatch = document.createElement('div');
-                swatch.className = 'color-swatch w-6 h-6 rounded-full cursor-pointer border border-gray-300';
-                swatch.style.backgroundColor = color;
-                swatch.dataset.color = color;
-                colorPaletteDiv.appendChild(swatch);
-            });
+            createColorPalette(colorPaletteDiv, card.querySelector('.color-input'));
         }
 
         function handlePlotConfigChange(e) {
@@ -366,13 +453,13 @@
         }
         
         function handlePlotConfigClick(e) {
+            const card = e.target.closest('.plot-config-card');
             if (e.target.classList.contains('remove-plot-btn')) {
-                e.target.closest('.plot-config-card').remove();
+                card.remove();
                 if (plotConfigsContainer.children.length === 0) {
                     plotButton.disabled = true;
                 }
-            } else if (e.target.classList.contains('color-swatch')) { // Add this block
-                const card = e.target.closest('.plot-config-card');
+            } else if (e.target.classList.contains('color-swatch')) {
                 const colorInput = card.querySelector('.color-input');
                 colorInput.value = e.target.dataset.color;
             }
@@ -391,24 +478,7 @@
             }
         }
 
-        // --- Tab & CSV Viewer ---
-        function switchTab(target) {
-            if (target === 'plot') {
-                plotContainer.style.display = 'flex';
-                csvViewerContainer.style.display = 'none';
-                tabPlot.classList.add('tab-active');
-                tabCsv.classList.remove('tab-active');
-            } else {
-                plotContainer.style.display = 'none';
-                csvViewerContainer.style.display = 'block';
-                tabPlot.classList.remove('tab-active');
-                tabCsv.classList.add('tab-active');
-                if (loadedFiles.length > 0) {
-                    displayCsvAsTable(csvSelectViewer.value);
-                }
-            }
-        }
-        
+        // --- CSV Viewer ---
         function updateCsvViewerSelect() {
             csvSelectViewer.innerHTML = loadedFiles.map(f => `<option value="${f.name}">${f.name}</option>`).join('');
             if (loadedFiles.length > 0) {
@@ -446,17 +516,179 @@
             if (!currentPlotData) return;
             const link = document.createElement('a');
             link.href = `data:image/png;base64,${currentPlotData}`;
-            const title = chartTitleInput.value || 'plot';
+            const title = chartTitleInput.value || funcChartTitle.value || 'plot';
             link.download = `${title.replace(/\s+/g, '_')}.png`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
 
+        function showLoading(message) {
+            plotArea.innerHTML = `<div class="loader"></div><p class="mt-2 text-gray-600">${message}</p>`;
+            errorMessageDiv.classList.add('hidden');
+            downloadBtn.classList.add('hidden');
+            currentPlotData = null;
+        }
+
+        function showPlot(imageBase64) {
+            plotArea.innerHTML = `<img src="data:image/png;base64,${imageBase64}" alt="Generated Plot" class="max-w-full max-h-full object-contain rounded-lg"/>`;
+            currentPlotData = imageBase64;
+            downloadBtn.classList.remove('hidden');
+        }
+
+        function showError(message) {
+            plotArea.innerHTML = '';
+            errorMessageDiv.textContent = message;
+            errorMessageDiv.classList.remove('hidden');
+            downloadBtn.classList.add('hidden');
+        }
+
+        // --- Function Plotting ---
+        function addFunctionPlotConfig() {
+            functionPlotIdCounter++;
+            const configId = `func-config-${functionPlotIdCounter}`;
+            const card = document.createElement('div');
+            card.className = 'plot-config-card';
+            card.id = configId;
+            const defaultColor = DEFAULT_COLORS[(functionPlotIdCounter - 1) % DEFAULT_COLORS.length];
+
+            card.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <p class="font-bold">数式プロット ${functionPlotIdCounter}</p>
+                    <button class="remove-plot-btn text-red-500 hover:text-red-700 font-bold">削除</button>
+                </div>
+                <div class="space-y-2">
+                    <div>
+                        <label class="text-sm">数式 (例: y = sin(x))</label>
+                        <input type="text" class="function-input w-full p-1 border rounded text-sm" placeholder="y = sin(x)">
+                    </div>
+                    <div>
+                        <label class="text-sm">プロット色</label>
+                        <input type="color" class="color-input w-full p-1 border rounded text-sm" value="${defaultColor}">
+                        <div class="color-palette mt-2 flex flex-wrap gap-1"></div>
+                    </div>
+                </div>
+            `;
+            functionPlotConfigsContainer.appendChild(card);
+            const colorPaletteDiv = card.querySelector('.color-palette');
+            createColorPalette(colorPaletteDiv, card.querySelector('.color-input'));
+            plotFunctionButton.disabled = false;
+        }
+
+        function handleFunctionPlotConfigClick(e) {
+            const card = e.target.closest('.plot-config-card');
+            if (e.target.classList.contains('remove-plot-btn')) {
+                card.remove();
+                if (functionPlotConfigsContainer.children.length === 0) {
+                    plotFunctionButton.disabled = true;
+                }
+            } else if (e.target.classList.contains('color-swatch')) {
+                const colorInput = card.querySelector('.color-input');
+                colorInput.value = e.target.dataset.color;
+            }
+        }
+
+        async function plotFunctionGraph() {
+            if (!pyodide) return;
+            
+            const functionConfigs = [];
+            document.querySelectorAll('#function-plot-configs-container .plot-config-card').forEach(card => {
+                const funcInput = card.querySelector('.function-input').value.trim();
+                if (funcInput) {
+                    functionConfigs.push({
+                        'equation': funcInput,
+                        'color': card.querySelector('.color-input').value
+                    });
+                }
+            });
+
+            if (functionConfigs.length === 0) {
+                alert("描画する数式が設定されていません。");
+                return;
+            }
+
+            showLoading("数式グラフを生成中...");
+
+            try {
+                pyodide.globals.set('function_configs_json', JSON.stringify(functionConfigs));
+                pyodide.globals.set('x_min', parseFloat(xMinFunc.value));
+                pyodide.globals.set('x_max', parseFloat(xMaxFunc.value));
+                pyodide.globals.set('g_title', funcChartTitle.value);
+                pyodide.globals.set('g_xlabel', funcXLabel.value);
+                pyodide.globals.set('g_ylabel', funcYLabel.value);
+
+                const imageBase64 = await pyodide.runPythonAsync(`
+import numpy as np
+import matplotlib.pyplot as plt
+import io
+import base64
+import json
+
+result = ""
+try:
+    function_configs = json.loads(function_configs_json)
+    fig, ax = plt.subplots(figsize=(10, 7))
+    x = np.linspace(x_min, x_max, 500)
+
+    safe_dict = {
+        'np': np, 'x': x,
+        'sin': np.sin, 'cos': np.cos, 'tan': np.tan,
+        'asin': np.arcsin, 'acos': np.arccos, 'atan': np.arctan,
+        'exp': np.exp, 'log': np.log, 'log10': np.log10,
+        'sqrt': np.sqrt, 'abs': np.abs, 'pi': np.pi, 'e': np.e
+    }
+
+    for config in function_configs:
+        equation = config['equation']
+        color = config['color']
+        
+        if '=' in equation:
+            formula = equation.split('=', 1)[1].strip()
+        else:
+            formula = equation
+        
+        y = eval(formula, {"__builtins__": {}}, safe_dict)
+        ax.plot(x, y, label=equation, color=color)
+
+    ax.set_title(g_title if g_title else "Function Plot")
+    ax.set_xlabel(g_xlabel if g_xlabel else "x")
+    ax.set_ylabel(g_ylabel if g_ylabel else "y")
+    ax.axhline(0, color='black', linewidth=0.5)
+    ax.axvline(0, color='black', linewidth=0.5)
+    ax.grid(True, linestyle='--', alpha=0.6)
+    if len(function_configs) > 0:
+        ax.legend()
+
+    fig.tight_layout()
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=150)
+    buf.seek(0)
+    result = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close(fig)
+
+except Exception as e:
+    result = f"Python Error: {e}"
+
+result
+                `);
+
+                if (imageBase64 && imageBase64.startsWith('iVBOR')) {
+                    showPlot(imageBase64);
+                } else {
+                    throw new Error(imageBase64 || "不明な描画エラーが発生しました。");
+                }
+
+            } catch (error) {
+                console.error("Error plotting function:", error);
+                showError(`グラフの生成に失敗しました。数式や入力範囲を確認してください。(${error.message})`);
+            }
+        }
+
+        // --- CSV Plotting ---
         async function plotChart() {
             if (!pyodide) return;
             const configs = [];
-            document.querySelectorAll('.plot-config-card').forEach(card => {
+            document.querySelectorAll('#plot-configs-container .plot-config-card').forEach(card => {
                 configs.push({
                     file: card.querySelector('.file-select').value,
                     type: card.querySelector('.type-select').value,
@@ -477,11 +709,7 @@
                 return;
             }
 
-            switchTab('plot');
-            plotArea.innerHTML = '<div class="loader"></div><p class="mt-2 text-gray-600">グラフを生成中...</p>';
-            errorMessageDiv.classList.add('hidden');
-            downloadBtn.classList.add('hidden');
-            currentPlotData = null;
+            showLoading("CSVグラフを生成中...");
 
             try {
                 const fileDataDict = loadedFiles.reduce((acc, file) => {
@@ -498,124 +726,110 @@
                 pyodide.globals.set('g_ylabel', yLabelInput.value);
 
                 const imageBase64 = await pyodide.runPythonAsync(`
-                    import pandas as pd
-                    import matplotlib.pyplot as plt
-                    import io
-                    import base64
-                    import json
-                    import math
-                    from io import StringIO
+import pandas as pd
+import matplotlib.pyplot as plt
+import io
+import base64
+import json
+import math
+from io import StringIO
 
-                    result = ""
-                    try:
-                        plot_configs = json.loads(plot_configs_json)
-                        file_data_dict = json.loads(file_data_dict_json)
-                        
-                        all_dfs = {}
-                        for name, content in file_data_dict.items():
-                            all_dfs[name] = pd.read_csv(StringIO(content), skiprows=skip_rows, header=0)
+result = ""
+try:
+    plot_configs = json.loads(plot_configs_json)
+    file_data_dict = json.loads(file_data_dict_json)
+    
+    all_dfs = {}
+    for name, content in file_data_dict.items():
+        all_dfs[name] = pd.read_csv(StringIO(content), skiprows=skip_rows, header=0)
 
-                        if plot_mode == 'overlay':
-                            fig, ax = plt.subplots(figsize=(10, 7))
-                            for i, conf in enumerate(plot_configs):
-                                df = all_dfs[conf['file']]
-                                
-                                label = conf.get('legend')
-                                if not label:
-                                    if conf['type'] in ['hist', 'boxplot']:
-                                        label = f"{conf['file']} - {conf['x']}"
-                                    else:
-                                        label = f"{conf['file']} - {conf['y']}"
+    if plot_mode == 'overlay':
+        fig, ax = plt.subplots(figsize=(10, 7))
+        for i, conf in enumerate(plot_configs):
+            df = all_dfs[conf['file']]
+            
+            label = conf.get('legend') or f"{conf['file']} - {conf.get('y', conf.get('x'))}"
 
-                                if conf['type'] == 'plot':
-                                    ax.plot(df[conf['x']], df[conf['y']], label=label, color=conf.get('color'))
-                                elif conf['type'] == 'scatter':
-                                    ax.scatter(df[conf['x']], df[conf['y']], label=label, color=conf.get('color'))
-                                elif conf['type'] == 'bar':
-                                    ax.bar(df[conf['x']], df[conf['y']], label=label, alpha=0.6, color=conf.get('color'))
-                                elif conf['type'] == 'hist':
-                                    ax.hist(df[conf['x']], bins=20, alpha=0.7, label=label, color=conf.get('color'))
-                                elif conf['type'] == 'boxplot':
-                                    # For overlay, plot side-by-side using positions
-                                    ax.boxplot(df[conf['x']], positions=[i], widths=0.6, patch_artist=True, boxprops=dict(facecolor=conf.get('color')))
+            if conf['type'] == 'plot':
+                ax.plot(df[conf['x']], df[conf['y']], label=label, color=conf.get('color'))
+            elif conf['type'] == 'scatter':
+                ax.scatter(df[conf['x']], df[conf['y']], label=label, color=conf.get('color'))
+            elif conf['type'] == 'bar':
+                ax.bar(df[conf['x']], df[conf['y']], label=label, alpha=0.7, color=conf.get('color'))
+            elif conf['type'] == 'hist':
+                ax.hist(df[conf['x']], bins=20, alpha=0.7, label=label, color=conf.get('color'))
+            elif conf['type'] == 'boxplot':
+                ax.boxplot(df[conf['x']].dropna(), positions=[i], widths=0.6, patch_artist=True, boxprops=dict(facecolor=conf.get('color')))
 
-                            ax.set_title(g_title if g_title else "Overlay Plot")
-                            ax.set_xlabel(g_xlabel if g_xlabel else "X-axis")
-                            ax.set_ylabel(g_ylabel if g_ylabel else "Y-axis")
-                            ax.legend()
-                            ax.grid(True, linestyle='--', alpha=0.6)
-                            
-                            # Apply x and y limits if provided
-                            if conf.get('x_min'): ax.set_xlim(left=float(conf['x_min']))
-                            if conf.get('x_max'): ax.set_xlim(right=float(conf['x_max']))
-                            if conf.get('y_min'): ax.set_ylim(bottom=float(conf['y_min']))
-                            if conf.get('y_max'): ax.set_ylim(top=float(conf['y_max']))
+        ax.set_title(g_title if g_title else "Overlay Plot")
+        ax.set_xlabel(g_xlabel if g_xlabel else "X-axis")
+        ax.set_ylabel(g_ylabel if g_ylabel else "Y-axis")
+        ax.legend()
+        ax.grid(True, linestyle='--', alpha=0.6)
+        
+        if plot_configs:
+            conf = plot_configs[0]
+            if conf.get('x_min'): ax.set_xlim(left=float(conf['x_min']))
+            if conf.get('x_max'): ax.set_xlim(right=float(conf['x_max']))
+            if conf.get('y_min'): ax.set_ylim(bottom=float(conf['y_min']))
+            if conf.get('y_max'): ax.set_ylim(top=float(conf['y_max']))
 
-                        elif plot_mode == 'separate':
-                            num_plots = len(plot_configs)
-                            if num_plots == 0:
-                                raise ValueError("No plots configured")
-                            
-                            cols = math.ceil(math.sqrt(num_plots))
-                            rows = math.ceil(num_plots / cols)
-                            
-                            fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 4 * rows))
-                            axes = axes.flatten() if num_plots > 1 else [axes]
+    elif plot_mode == 'separate':
+        num_plots = len(plot_configs)
+        if num_plots == 0: raise ValueError("No plots configured")
+        
+        cols = math.ceil(math.sqrt(num_plots))
+        rows = math.ceil(num_plots / cols)
+        
+        fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 4.5 * rows), squeeze=False)
+        axes = axes.flatten()
 
-                            for i, conf in enumerate(plot_configs):
-                                ax = axes[i]
-                                df = all_dfs[conf['file']]
+        for i, conf in enumerate(plot_configs):
+            ax = axes[i]
+            df = all_dfs[conf['file']]
 
-                                title = conf.get('title')
-                                if not title:
-                                    if conf['type'] in ['hist', 'boxplot']:
-                                        title = f"{conf['file']}\\n{conf['x']}"
-                                    else:
-                                        title = f"{conf['file']}\\n{conf['x']} vs {conf['y']}"
+            title = conf.get('title') or f"{conf['file']}\\n{conf['x']} vs {conf.get('y', '')}".strip()
 
-                                if conf['type'] == 'plot':
-                                    ax.plot(df[conf['x']], df[conf['y']], color=conf.get('color'))
-                                elif conf['type'] == 'scatter':
-                                    ax.scatter(df[conf['x']], df[conf['y']], color=conf.get('color'))
-                                elif conf['type'] == 'bar':
-                                    ax.bar(df[conf['x']], df[conf['y']], color=conf.get('color'))
-                                elif conf['type'] == 'hist':
-                                    ax.hist(df[conf['x']], bins=20, color=conf.get('color'))
-                                elif conf['type'] == 'boxplot':
-                                    ax.boxplot(df[conf['x']], patch_artist=True, boxprops=dict(facecolor=conf.get('color')))
-                                
-                                ax.set_title(title, fontsize=10)
-                                ax.set_xlabel(conf['x'], fontsize=8)
-                                if conf['type'] not in ['hist', 'boxplot']:
-                                    ax.set_ylabel(conf['y'], fontsize=8)
-                                ax.grid(True, linestyle='--', alpha=0.6)
+            if conf['type'] == 'plot':
+                ax.plot(df[conf['x']], df[conf['y']], color=conf.get('color'))
+            elif conf['type'] == 'scatter':
+                ax.scatter(df[conf['x']], df[conf['y']], color=conf.get('color'))
+            elif conf['type'] == 'bar':
+                ax.bar(df[conf['x']], df[conf['y']], color=conf.get('color'))
+            elif conf['type'] == 'hist':
+                ax.hist(df[conf['x']], bins=20, color=conf.get('color'))
+            elif conf['type'] == 'boxplot':
+                ax.boxplot(df[conf['x']].dropna(), patch_artist=True, boxprops=dict(facecolor=conf.get('color')))
+            
+            ax.set_title(title, fontsize=10)
+            ax.set_xlabel(conf['x'], fontsize=8)
+            if conf['type'] not in ['hist', 'boxplot']:
+                ax.set_ylabel(conf['y'], fontsize=8)
+            ax.grid(True, linestyle='--', alpha=0.6)
 
-                                # Apply x and y limits if provided
-                                if conf.get('x_min'): ax.set_xlim(left=float(conf['x_min']))
-                                if conf.get('x_max'): ax.set_xlim(right=float(conf['x_max']))
-                                if conf.get('y_min'): ax.set_ylim(bottom=float(conf['y_min']))
-                                if conf.get('y_max'): ax.set_ylim(top=float(conf['y_max']))
-                            
-                            for j in range(num_plots, len(axes)):
-                                axes[j].set_visible(False)
+            if conf.get('x_min'): ax.set_xlim(left=float(conf['x_min']))
+            if conf.get('x_max'): ax.set_xlim(right=float(conf['x_max']))
+            if conf.get('y_min'): ax.set_ylim(bottom=float(conf['y_min']))
+            if conf.get('y_max'): ax.set_ylim(top=float(conf['y_max']))
+        
+        for j in range(num_plots, len(axes)):
+            axes[j].set_visible(False)
 
-                        fig.tight_layout(pad=3.0)
-                        buf = io.BytesIO()
-                        fig.savefig(buf, format='png', dpi=150)
-                        buf.seek(0)
-                        result = base64.b64encode(buf.read()).decode('utf-8')
-                        plt.close(fig)
+    fig.tight_layout(pad=2.0)
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=150)
+    buf.seek(0)
+    result = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close(fig)
 
-                    except Exception as e:
-                        result = f"Python Error: {e}"
+except Exception as e:
+    result = f"Python Error: {e}"
 
-                    result
+result
                 `);
 
                 if (imageBase64 && imageBase64.startsWith('iVBOR')) {
-                     plotArea.innerHTML = `<img src="data:image/png;base64,${imageBase64}" alt="Generated Plot" class="max-w-full max-h-full object-contain rounded-lg"/>`;
-                     currentPlotData = imageBase64;
-                     downloadBtn.classList.remove('hidden');
+                    showPlot(imageBase64);
                 } else {
                     throw new Error(imageBase64 || "不明な描画エラーが発生しました。");
                 }
@@ -625,13 +839,9 @@
                 const errorText = error.message.includes("KeyError") 
                     ? `選択された列が見つかりません。CSVのヘッダーとスキップ行数を確認してください。` 
                     : `グラフの生成に失敗しました。(${error.message})`;
-                plotArea.innerHTML = '';
-                errorMessageDiv.textContent = errorText;
-                errorMessageDiv.classList.remove('hidden');
-                downloadBtn.classList.add('hidden');
+                showError(errorText);
             }
         }
     </script>
 </body>
 </html>
-
