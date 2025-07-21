@@ -344,7 +344,7 @@
                 const headerLine = lines[skipRows] || '';
                 file.headers = headerLine.split(',').map(h => h.trim().replace(/"/g, ''));
             });
-            document.querySelectorAll('.plot-config-card').forEach(card => {
+            document.querySelectorAll('#plot-configs-container .plot-config-card').forEach(card => {
                 const fileSelect = card.querySelector('.file-select');
                 updateAxisSelectors(card, fileSelect.value);
             });
